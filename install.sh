@@ -1,203 +1,399 @@
-# Arch Linux base
-sudo pacman -Syu
-sudo pacman -S --noconfirm git curl wget base-devel
-
-# AUR helper (yay)
-git clone https://aur.archlinux.org/yay.git
-cd yay && makepkg -si && cd ..
-
-# BlackArch repo (for pentesting tools)
-curl -s https://blackarch.org/strap.sh | sudo bash
-sudo pacman -Syyu
-
----
-
-### 2️⃣ **`colors.sh`**
-
-```bash
 #!/usr/bin/env bash
-# ARCHPULSE - Color Configuration
-# Theme: Red • Yellow • Green • Blue • Purple • Cyan
+# ARCHPULSE - Main Installer for Arch Linux / BlackArch
 
-# ANSI Colors
-R='\033[1;31m'    # Merah - Exploit/Danger
-G='\033[1;32m'    # Hijau - Success/Recon
-Y='\033[1;33m'    # Kuning - Warning/Scanner
-B='\033[1;34m'    # Biru - Enumeration
-P='\033[1;35m'    # Purple - Password/PrivEsc
-C='\033[1;36m'    # Cyan - Info
-W='\033[1;37m'    # Putih
-N='\033[0m'       # Reset
-D='\033[2m'       # Dim
-BD='\033[1m'       # Bold
-UL='\033[4m'       # Underline
-BL='\033[5m'       # Blink
+set -e
 
-# Backgrounds
-BG_R='\033[41m'
-BG_G='\033[42m'
-BG_Y='\033[43m'
-BG_B='\033[44m'
-BG_P='\033[45m'
-BG_C='\033[46m'
+# Source colors
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/colors.sh"
 
-# Icons (colored)
-CHECK="${G}✓${N}"
-CROSS="${R}✗${N}"
-WARN="${Y}⚠${N}"
-ARROW="${C}→${N}"
-BOLT="${Y}⚡${N}"
-SKULL="${R}☠${N}"
-SHIELD="${G}🛡${N}"
-EYE="${C}👁${N}"
-FIRE="${R}🔥${N}"
-LOCK="${Y}🔒${N}"
-GLOBE="${C}🌐${N}"
-TARGET="${R}🎯${N}"
-GEAR="${G}⚙${N}"
-STAR="${Y}★${N}"
-KEY="${P}🔑${N}"
-NET="${B}🌍${N}"
-DB="${G}🗄${N}"
-BUG="${R}🐛${N}"
+# Trap
+trap 'echo -e "\n${R}[${CROSS}] Installation interrupted!${N}"; exit 1' SIGINT SIGTERM
 
-# ============ FUNCTIONS ============
+# Check if running as root
+if [ "$EUID" -eq 0 ]; then
+    SUDO=""
+else
+    SUDO="sudo"
+fi
 
-# Header dengan border
-header() {
-    local title="$1"
-    local color="${2:-$R}"
-    echo ""
-    echo -e "${color}╔══════════════════════════════════════════════════════════╗${N}"
-    echo -e "${color}║${N}  ${Y}${BD}◆${N} ${W}${BD}${title}${N} ${Y}${BD}◆${N}"
-    echo -e "${color}╚══════════════════════════════════════════════════════════╝${N}"
-    echo ""
-}
+# ============================================
+# BANNER
+# ============================================
+clear
+cat "${SCRIPT_DIR}/.banner.txt" 2>/dev/null || true
+echo ""
+header "ARCHPULSE INSTALLER v2.0"
 
-# Success message
-success() {
-    echo -e " ${G}[${CHECK}]${N} ${1}"
-}
+# Check Arch
+if ! grep -qi "arch" /etc/os-release 2>/dev/null; then
+    warning "This installer is designed for Arch Linux-based systems"
+    if ! confirm "Continue anyway?"; then
+        exit 1
+    fi
+fi
 
-# Error message  
-error() {
-    echo -e " ${R}[${CROSS}]${N} ${1}"
-}
+# ============================================
+# SYSTEM UPDATE
+# ============================================
+header "UPDATING SYSTEM"
+info "Running system update..."
+$SUDO pacman -Syu --noconfirm
+success "System updated!"
 
-# Warning message
-warning() {
-    echo -e " ${Y}[${WARN}]${N} ${1}"
-}
+# ============================================
+# ADD BLACKARCH REPO
+# ============================================
+header "BLACKARCH REPOSITORY"
 
-# Info message
-info() {
-    echo -e " ${C}[${ARROW}]${N} ${1}"
-}
+if ! pacman -Sl blackarch 2>/dev/null | grep -q .; then
+    info "Adding BlackArch repository..."
+    curl -s https://blackarch.org/strap.sh | $SUDO bash
+    $SUDO pacman -Syyu --noconfirm
+    success "BlackArch repository added!"
+else
+    info "BlackArch repository already configured"
+fi
 
-# Section separator
-separator() {
-    local char="${1:-─}"
-    echo -e "${D}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${char}${N}"
-}
+# ============================================
+# INSTALL BASE DEPENDENCIES
+# ============================================
+header "INSTALLING BASE DEPENDENCIES"
 
-# Menu item
-menu_item() {
-    local num="$1"
-    local name="$2"
-    local desc="$3"
-    local color="${4:-$G}"
-    echo -e " ${R}[${Y}${num}${R}]${N} ${color}${name}${N} ${D}─${N} ${C}${desc}${N}"
-}
+BASE_DEPS=(
+    git curl wget base-devel
+    python python-pip python2
+    go rust nodejs npm
+    perl ruby php
+    jq unzip zip tar
+    tmux screen vim nano
+    toilet figlet lolcat
+)
 
-# Sub menu item
-submenu_item() {
-    local num="$1"
-    local name="$2"
-    local desc="$3"
-    echo -e "   ${Y}[${num}]${N} ${G}${name}${N} ${D}─${N} ${C}${desc}${N}"
-}
+info "Installing ${#BASE_DEPS[@]} base packages..."
+$SUDO pacman -S --noconfirm --needed "${BASE_DEPS[@]}"
+success "Base dependencies installed!"
 
-# Tool banner
-tool_banner() {
+# Install AUR helper if not present
+if ! command -v yay &>/dev/null; then
+    info "Installing yay (AUR helper)..."
+    git clone https://aur.archlinux.org/yay.git /tmp/yay
+    cd /tmp/yay && makepkg -si --noconfirm && cd "$SCRIPT_DIR"
+    success "yay installed!"
+fi
+
+# ============================================
+# INSTALL TOOLS BY CATEGORY
+# ============================================
+install_category() {
     local name="$1"
-    local category="$2"
-    local color="${3:-$R}"
-    echo ""
-    echo -e "${color}╔══════════════════════════════════════════════════════════╗${N}"
-    echo -e "${color}║${N} ${Y}${BOLT}${N} ${W}${BD}${name}${N}"
-    echo -e "${color}║${N} ${C}Category:${N} ${Y}${category}${N}"
-    echo -e "${color}╚══════════════════════════════════════════════════════════╝${N}"
-    echo ""
-}
-
-# Progress bar
-progress_bar() {
-    local current="$1"
-    local total="$2"
-    local width=50
-    local pct=$((current * 100 / total))
-    local filled=$((current * width / total))
-    local empty=$((width - filled))
+    local pkgs=("${@:2}")
+    header "INSTALLING ${name} TOOLS"
     
-    printf "\r${Y}[${N}"
-    for ((i=0; i<filled; i++)); do printf "${G}█${N}"; done
-    for ((i=0; i<empty; i++)); do printf "${R}░${N}"; done
-    printf "${Y}]${N} ${G}%d%%${N} ${D}(%d/%d)${N}" "$pct" "$current" "$total"
-}
-
-# Loading spinner
-spinner() {
-    local pid=$1
-    local msg="$2"
-    local spin='|/-\'
-    local i=0
-    while kill -0 "$pid" 2>/dev/null; do
-        i=$(( (i+1) % 4 ))
-        printf "\r${Y}[${spin:$i:1}]${N} ${msg} ... "
-        sleep 0.1
+    local total=${#pkgs[@]}
+    local count=0
+    
+    for pkg in "${pkgs[@]}"; do
+        count=$((count + 1))
+        echo -ne "\r${Y}[${count}/${total}]${N} Installing ${G}${pkg}${N}...         "
+        if pacman -Qi "$pkg" &>/dev/null; then
+            echo -ne "\r${G}[${CHECK}]${N} ${pkg} ${D}already installed${N}          \n"
+        else
+            if $SUDO pacman -S --noconfirm --needed "$pkg" 2>/dev/null; then
+                echo -ne "\r${G}[${CHECK}]${N} ${pkg} installed!          \n"
+            else
+                yay -S --noconfirm "$pkg" 2>/dev/null && \
+                    echo -ne "\r${G}[${CHECK}]${N} ${pkg} installed!          \n" || \
+                    echo -ne "\r${Y}[${WARN}]${N} ${pkg} ${Y}failed${N}           \n"
+            fi
+        fi
     done
-    printf "\r${G}[${CHECK}]${N} ${msg} ${G}Done!${N}   \n"
+    success "${name} tools installed!"
 }
 
-# Typewriter effect
-typewrite() {
-    local text="$1"
-    local color="${2:-$G}"
-    for ((i=0; i<${#text}; i++)); do
-        echo -ne "${color}${text:$i:1}${N}"
-        sleep 0.02
-    done
-    echo ""
-}
+# --- RECON TOOLS ---
+install_category "RECON" \
+    nmap masscan \
+    metasploit amass \
+    subfinder httpx \
+    nuclei dnsx naabu \
+    findomain assetfinder \
+    gospider hakrawler \
+    waybackpy
 
-# Confirm prompt
-confirm() {
-    local prompt="$1"
-    local default="${2:-n}"
-    local yn
-    read -p "$(echo -e ${Y}"[?] ${prompt} [y/N]: "${N})" yn
-    case "$yn" in
-        [Yy]*) return 0 ;;
-        *) return 1 ;;
-    esac
-}
+# --- SCANNER TOOLS ---
+install_category "SCANNER" \
+    nikto whatweb \
+    wfuzz gobuster \
+    dirsearch skipfish \
+    wapiti arachni \
+    openvas
 
-# Export all
-export R G Y B P C W N D BD UL BL
-export BG_R BG_G BG_Y BG_B BG_P BG_C
-export CHECK CROSS WARN ARROW BOLT SKULL SHIELD EYE FIRE LOCK GLOBE TARGET GEAR STAR KEY NET DB BUG
+# --- EXPLOIT TOOLS ---
+install_category "EXPLOIT" \
+    metasploit sqlmap \
+    commix beef-project \
+    routersploit \
+    exploitdb \
+    xsstrike shellnoob
 
-┌─────────────────────────────────────────────────────────────┐
-│                  ⚡ ARCHPULSE MAIN MENU ⚡                   │
-│                                                             │
-│  [1] 🔴 RECON      — Nmap, RustScan, Amass, Subfinder...   │
-│  [2] 🟡 SCANNER    — Nikto, Wfuzz, Ffuf, Gobuster...      │
-│  [3] 🟢 EXPLOIT    — Metasploit, SQLMap, BeEF...           │
-│  [4] 🔵 ENUMERATION — Enum4linux, DNSEnum, LinEnum...     │
-│  [5] 🟣 PASSWORD    — Hydra, John, Hashcat, Crunch...      │
-│  [6] 🟠 BETTERCAP   — MITM, ARP Spoof, Sniffer...          │
-│  [7] 🔶 BURPSUITE   — Proxy, Intruder, Scanner...          │
-│  [8] ⚪ SQL TOOLS    — SQLMap, NoSQLMap, BBQSQL...         │
-│  [9] ⚡ QUICK SCAN   — Automated full scan                  │
-│  [0] ❌ EXIT                                              │
-└─────────────────────────────────────────────────────────────┘
+# --- ENUMERATION TOOLS ---
+install_category "ENUMERATION" \
+    enum4linux smbclient \
+    snmp++ dnsenum \
+    dnsrecon ldap-server \
+    nbtscan
+
+# --- PASSWORD TOOLS ---
+install_category "PASSWORD" \
+    hydra john hashcat \
+    medusa crunch \
+    cewl
+
+# --- BETTERCAP ---
+install_category "BETTERCAP" \
+    bettercap
+
+# --- BURPSUITE ---
+install_category "BURPSUITE" \
+    burpsuite
+
+# --- SQL TOOLS ---
+install_category "SQL" \
+    sqlmap sqlninja \
+    nosqlmap bbqsql
+
+# ============================================
+# INSTALL PYTHON TOOLS
+# ============================================
+header "INSTALLING PYTHON PACKAGES"
+
+PYTHON_PKGS=(
+    requests beautifulsoup4
+    scapy colorama termcolor
+    pyfiglet python-nmap
+    shodan censys
+    paramiko pwn pwntools
+    flask dnspython
+    ipwhois phonenumbers folium
+    mechanize httpx websocket-client
+    impacket
+)
+
+for pkg in "${PYTHON_PKGS[@]}"; do
+    pip install "$pkg" 2>/dev/null >/dev/null || true
+done
+success "Python packages installed!"
+
+# ============================================
+# INSTALL GO TOOLS
+# ============================================
+header "INSTALLING GO TOOLS"
+
+export GOPATH="$HOME/go"
+export PATH="$PATH:$GOPATH/bin"
+
+GO_TOOLS=(
+    "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+    "github.com/projectdiscovery/httpx/cmd/httpx@latest"
+    "github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest"
+    "github.com/projectdiscovery/dnsx/cmd/dnsx@latest"
+    "github.com/projectdiscovery/naabu/v2/cmd/naabu@latest"
+    "github.com/tomnomnom/waybackurls@latest"
+    "github.com/lc/gau/v2/cmd/gau@latest"
+    "github.com/tomnomnom/assetfinder@latest"
+    "github.com/OJ/gobuster/v3@latest"
+    "github.com/ffuf/ffuf@latest"
+    "github.com/jaeles-project/gospider@latest"
+    "github.com/hakluke/hakrawler@latest"
+)
+
+for tool in "${GO_TOOLS[@]}"; do
+    name="$(basename "$tool" | sed 's/@latest//')"
+    if ! command -v "$name" &>/dev/null; then
+        echo -ne "${C}[${ARROW}]${N} Installing ${Y}${name}${N}... "
+        go install -v "$tool" 2>/dev/null >/dev/null && \
+            echo -e "${G}[${CHECK}]${N}" || \
+            echo -e "${Y}[${WARN}]${N} ${D}failed${N}"
+    fi
+done
+success "Go tools installed!"
+
+# ============================================
+# SETUP DIRECTORY STRUCTURE
+# ============================================
+header "SETTING UP DIRECTORIES"
+
+ARCHPULSE_DIR="$HOME/archpulse"
+mkdir -p "$ARCHPULSE_DIR"/{reports,wordlists,logs,configs}
+
+# Copy configs
+cp -r "${SCRIPT_DIR}/configs/"* "$ARCHPULSE_DIR/configs/" 2>/dev/null || true
+success "Directories created at $ARCHPULSE_DIR"
+
+# ============================================
+# DOWNLOAD WORDLISTS
+# ============================================
+header "DOWNLOADING WORDLISTS"
+
+WORDLIST_DIR="$ARCHPULSE_DIR/wordlists"
+
+if [ ! -f "$WORDLIST_DIR/rockyou.txt" ]; then
+    info "Downloading rockyou wordlist..."
+    curl -L -o /tmp/rockyou.txt.gz https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt 2>/dev/null
+    gunzip -f /tmp/rockyou.txt.gz 2>/dev/null
+    mv /tmp/rockyou.txt "$WORDLIST_DIR/" 2>/dev/null
+    success "rockyou.txt downloaded!"
+else
+    info "rockyou.txt already exists"
+fi
+
+# Common wordlists
+for wl in "common.txt" "directory-list-2.3-medium.txt" "raft-large-words.txt"; do
+    if [ ! -f "$WORDLIST_DIR/$wl" ]; then
+        wget -q "https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/$wl" -O "$WORDLIST_DIR/$wl" 2>/dev/null &
+    fi
+done
+wait
+success "Wordlists downloaded!"
+
+# ============================================
+# INSTALL LAUNCHER
+# ============================================
+header "INSTALLING LAUNCHER"
+
+# Copy archpulse.sh to bin
+$SUDO cp "${SCRIPT_DIR}/archpulse.sh" /usr/local/bin/archpulse
+$SUDO chmod +x /usr/local/bin/archpulse
+success "Launcher installed! Type 'archpulse' to start"
+
+# ============================================
+# ADD TO PATH & ALIASES
+# ============================================
+header "CONFIGURING SHELL"
+
+BASHRC="$HOME/.bashrc"
+ZSH="$HOME/.zshrc"
+
+# Add GOPATH
+if ! grep -q "ARCHPULSE" "$BASHRC" 2>/dev/null; then
+    cat >> "$BASHRC" << 'EOF'
+
+# ===== ARCHPULSE CONFIGURATION =====
+export GOPATH="$HOME/go"
+export PATH="$PATH:$GOPATH/bin"
+export PATH="$PATH:$HOME/archpulse"
+
+alias arp='archpulse'
+alias arp-recon='archpulse recon'
+alias arp-scan='archpulse scanner'
+alias arp-exploit='archpulse exploit'
+alias arp-enum='archpulse enum'
+alias arp-crack='archpulse password'
+alias arp-mitm='archpulse bettercap'
+alias arp-burp='archpulse burp'
+alias arp-sql='archpulse sql'
+alias arp-quick='archpulse quick-scan'
+alias arp-web='archpulse web-scan'
+
+# Interactive shell prompt customization
+export PS1='\[\e[0;31m\][\[\e[1;33m\]ARCHPULSE\[\e[0;31m\]\[\e[0;37m\]@\[\e[0;32m\]\u\[\e[0;37m\]:\[\e[0;34m\]\w\[\e[0;31m\]]\[\e[1;33m\]➤\[\e[0m\] '
+EOF
+    success "Aliases and PATH configured in .bashrc"
+fi
+
+# Source if zsh exists
+if [ -f "$ZSH" ]; then
+    if ! grep -q "ARCHPULSE" "$ZSH" 2>/dev/null; then
+        cat >> "$ZSH" << 'EOF'
+
+# ===== ARCHPULSE CONFIGURATION =====
+export GOPATH="$HOME/go"
+export PATH="$PATH:$GOPATH/bin"
+export PATH="$PATH:$HOME/archpulse"
+
+alias arp='archpulse'
+alias arp-recon='archpulse recon'
+alias arp-scan='archpulse scanner'
+alias arp-exploit='archpulse exploit'
+alias arp-enum='archpulse enum'
+alias arp-crack='archpulse password'
+alias arp-mitm='archpulse bettercap'
+alias arp-burp='archpulse burp'
+alias arp-sql='archpulse sql'
+EOF
+        success "Aliases and PATH configured in .zshrc"
+    fi
+fi
+
+# ============================================
+# VERIFY INSTALLATION
+# ============================================
+header "VERIFYING INSTALLATION"
+
+tools_to_check=(
+    "nmap" "masscan" "nikto" "whatweb" "wfuzz" "gobuster"
+    "sqlmap" "hydra" "john" "hashcat" "metasploit"
+    "bettercap" "burpsuite" "dnsenum" "dnsrecon"
+    "enum4linux" "smbclient" "gospider" "hakrawler"
+    "commix" "crunch" "cewl" "dirsearch"
+)
+
+echo ""
+echo -e "${C}┌─────────────┬──────────┐${N}"
+echo -e "${C}│${N} ${Y}TOOL${N}           ${C}│${N} ${Y}STATUS${N}    ${C}│${N}"
+echo -e "${C}├─────────────┼──────────┤${N}"
+
+for tool in "${tools_to_check[@]}"; do
+    if command -v "$tool" &>/dev/null || pacman -Qi "$tool" &>/dev/null; then
+        printf "│ %-13s │ ${G}%-8s${N} │\n" "$tool" "✓ OK"
+    else
+        printf "│ %-13s │ ${Y}%-8s${N} │\n" "$tool" "✗ MISSING"
+    fi
+done
+
+echo -e "${C}└─────────────┴──────────┘${N}"
+echo ""
+
+# ============================================
+# COMPLETION BANNER
+# ============================================
+clear
+echo -e "${R}"
+echo "██████████████████████████████████████████████████████████████████"
+echo "██                                                              ██"
+echo "██            █████╗ ██████╗  ██████╗██╗  ██╗██████╗            ██"
+echo "██           ██╔══██╗██╔══██╗██╔════╝██║  ██║██╔══██╗           ██"
+echo "██           ███████║██████╔╝██║     ███████║██████╔╝           ██"
+echo "██           ██╔══██║██╔══██╗██║     ██╔══██║██╔══██╗           ██"
+echo "██           ██║  ██║██║  ██║╚██████╗██║  ██║██████╔╝           ██"
+echo "██           ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═════╝            ██"
+echo "██                                                              ██"
+echo "██              ╔══════════════════════════════════╗             ██"
+echo "██              ║   INSTALLATION COMPLETE! 🎯    ║             ██"
+echo "██              ╚══════════════════════════════════╝             ██"
+echo "██                                                              ██"
+echo "██  ${G}⚡ LAUNCH${N}                        ${R}⚡ COMMANDS${N}               ██"
+echo "██  ${G}━━━━━━━━━${N}                        ${R}━━━━━━━━━━${N}              ██"
+echo "██  ${Y}archpulse${N}      - Main menu       ${Y}arp-quick <ip>${N}         ██"
+echo "██  ${Y}arp-recon${N}      - Recon tools      ${Y}arp-web <url>${N}         ██"
+echo "██  ${Y}arp-scan${N}       - Scanner tools    ${Y}arp-mitm <iface>${N}      ██"
+echo "██  ${Y}arp-exploit${N}    - Exploit tools    ${Y}arp-burp${N}              ██"
+echo "██  ${Y}arp-enum${N}       - Enumeration tools ${Y}arp-crack <hashfile>${N} ██"
+echo "██                                                              ██"
+echo "██  ${G}📁 Wordlists:${N} ~/archpulse/wordlists/                    ██"
+echo "██  ${G}📁 Reports:${N}   ~/archpulse/reports/                       ██"
+echo "██  ${G}📁 Configs:${N}   ~/archpulse/configs/                       ██"
+echo "██                                                              ██"
+echo "██  ${R}☠ AUTHORIZED PENTESTING ONLY ${N}                         ██"
+echo "██                                                              ██"
+echo "██████████████████████████████████████████████████████████████████"
+echo -e "${N}"
+echo ""
+echo -e "  ${Y}Reboot terminal or run:${N} ${G}source ~/.bashrc${N}"
+echo ""
+
+# Source bashrc
+source ~/.bashrc 2>/dev/null || true
+
+exit 0
