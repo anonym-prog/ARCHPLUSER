@@ -186,3 +186,18 @@ confirm() {
 export R G Y B P C W N D BD UL BL
 export BG_R BG_G BG_Y BG_B BG_P BG_C
 export CHECK CROSS WARN ARROW BOLT SKULL SHIELD EYE FIRE LOCK GLOBE TARGET GEAR STAR KEY NET DB BUG
+
+┌─────────────────────────────────────────────────────────────┐
+│                  ⚡ ARCHPULSE MAIN MENU ⚡                   │
+│                                                             │
+│  [1] 🔴 RECON      — Nmap, RustScan, Amass, Subfinder...   │
+│  [2] 🟡 SCANNER    — Nikto, Wfuzz, Ffuf, Gobuster...      │
+│  [3] 🟢 EXPLOIT    — Metasploit, SQLMap, BeEF...           │
+│  [4] 🔵 ENUMERATION — Enum4linux, DNSEnum, LinEnum...     │
+│  [5] 🟣 PASSWORD    — Hydra, John, Hashcat, Crunch...      │
+│  [6] 🟠 BETTERCAP   — MITM, ARP Spoof, Sniffer...          │
+│  [7] 🔶 BURPSUITE   — Proxy, Intruder, Scanner...          │
+│  [8] ⚪ SQL TOOLS    — SQLMap, NoSQLMap, BBQSQL...         │
+│  [9] ⚡ QUICK SCAN   — Automated full scan                  │
+│  [0] ❌ EXIT                                              │
+└─────────────────────────────────────────────────────────────┘
