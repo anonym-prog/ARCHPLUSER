@@ -13,7 +13,7 @@
 ╚══════════════════════════════════════════════════════════════════════╝
 
 > **Authorized Pentesting Framework — Arch Linux / BlackArch**
-> **Author:** [Your Username]
+> **Author:** [adalah pokok nya]
 > **Version:** 2.0 | **Distro:** Arch Linux + BlackArch Repo
 
 ---
