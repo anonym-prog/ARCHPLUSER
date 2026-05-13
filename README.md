@@ -49,3 +49,26 @@ chmod +x install.sh setup.sh modules/*.sh scripts/*.sh
 
 # Run installer
 ./install.sh
+
+## 📊 50 TOOLS OVERVIEW
+
+### 🔴 Reconnaissance (10)
+`nmap` `rustscan` `masscan` `subfinder` `amass` `httpx` `nuclei` `assetfinder` `findomain` `dnsx/naabu`
+
+### 🟡 Scanner (10)
+`nikto` `whatweb` `wfuzz` `ffuf` `dirsearch` `gobuster` `gospider` `hakrawler` `wapiti` `skipfish`
+
+### 🟢 Exploit (10)
+`metasploit` `sqlmap` `commix` `beef-xss` `routersploit` `searchsploit` `xsstrike` `shellnoob` `exploitdb` `hydra`
+
+### 🔵 Enumeration (7)
+`enum4linux` `smbclient` `snmpwalk` `dnsenum` `dnsrecon` `ldapsearch` `linpeas/linenum`
+
+### 🟣 Password Cracking (6)
+`hydra` `john` `hashcat` `crunch` `cewl` `medusa`
+
+### 🟠 Network/MITM (4)
+`bettercap` `aircrack-ng` `mdk4` `pixiewps`
+
+### 🔶 Web App/SQL (3)
+`burpsuite` `nosqlmap` `bbqsql`
